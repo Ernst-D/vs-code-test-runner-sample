@@ -20,9 +20,16 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	const _disposable = vscode.commands.registerCommand('test-runner-sample-ext.showCurrentTimeTest', () => {
+		const date = new Date();
+		const formatted =  new Intl.DateTimeFormat("en-GB", {
+			dateStyle: "medium",
+			timeStyle: "long",
+			timeZone: "Asia/Tbilisi",
+		  }).format(date);
+
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
-		vscode.window.showInformationMessage('This will be current time!');
+		vscode.window.showInformationMessage('Current time is: '+formatted);
 	});
 
 	context.subscriptions.push(...[disposable,_disposable]);
