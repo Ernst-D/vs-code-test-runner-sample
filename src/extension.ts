@@ -32,6 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Current time is: '+formatted);
 	});
 
+	const testController = vscode.tests.createTestController("helloWorldTests","Hello World Tests");
+
 	context.subscriptions.push(...[disposable,_disposable]);
 }
 
