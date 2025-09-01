@@ -21,21 +21,21 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const _disposable = vscode.commands.registerCommand('test-runner-sample-ext.showCurrentTimeTest', () => {
 		const date = new Date();
-		const formatted =  new Intl.DateTimeFormat("en-GB", {
+		const formatted = new Intl.DateTimeFormat("en-GB", {
 			dateStyle: "medium",
 			timeStyle: "long",
 			timeZone: "Asia/Tbilisi",
-		  }).format(date);
+		}).format(date);
 
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
-		vscode.window.showInformationMessage('Current time is: '+formatted);
+		vscode.window.showInformationMessage('Current time is: ' + formatted);
 	});
 
-	const testController = vscode.tests.createTestController("helloWorldTests","Hello World Tests");
+	const testController = vscode.tests.createTestController("helloWorldTests", "Hello World Tests");
 
-	context.subscriptions.push(...[disposable,_disposable]);
+	context.subscriptions.push(...[disposable, _disposable]);
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }

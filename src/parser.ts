@@ -12,24 +12,24 @@ export const parseMarkdown = (
 ) => {
     const lines = text.split("\n");
 
-    for(let lineIndex = 0; lineIndex < lines.length; lineIndex++){
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
         const line = lines[lineIndex];
         const test = testRe.exec(line);
 
-        if(test){
+        if (test) {
             const [_, a, operator, b, expected] = test;
             const range = new vscode.Range(
-                new vscode.Position(lineIndex,0), 
-                new vscode.Position(lineIndex,test[0].length)
+                new vscode.Position(lineIndex, 0),
+                new vscode.Position(lineIndex, test[0].length)
             );
-            events.onTest(range, Number(a), operator, Number(b),Number(expected));
+            events.onTest(range, Number(a), operator, Number(b), Number(expected));
             continue;
         }
 
         const heading = headingRe.exec(line);
-        if(heading) {
+        if (heading) {
             const [, pounds, name] = heading;
-            const range = new vscode.Range(new vscode.Position(lineIndex,0), new vscode.Position(lineIndex, line.length));
+            const range = new vscode.Range(new vscode.Position(lineIndex, 0), new vscode.Position(lineIndex, line.length));
             events.onHeading(range, name, pounds.length);
         }
     }
