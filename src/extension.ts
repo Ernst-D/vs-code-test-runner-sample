@@ -94,8 +94,36 @@ export function activate(context: vscode.ExtensionContext) {
 	testController.resolveHandler = async item => {
 		if (!item) {
 			context.subscriptions.push(...startWatchingWorkspace(testController, fileChangedEmitter));
+			return;
+		}
+
+		const data = testData.get(item);
+		if (data instanceof TestFile) {
+			await data.updateFromDisk(testController, item);
 		}
 	}
+
+	function updateNodeFromDocument(e: vscode.TextDocument) {
+		if (e.uri.scheme !== "file") {
+			return;
+		}
+
+		if (!e.uri.path.endsWith('.md')) {
+			return;
+		}
+
+		const { file, data } = getOrCreateFile(testController, e.uri);
+		data.updateFromContents(testController, e.getText(), file);
+	}
+
+	for (const document of vscode.workspace.textDocuments) {
+		updateNodeFromDocument(document);
+	}
+
+	context.subscriptions.push(
+		vscode.workspace.onDidOpenTextDocument(updateNodeFromDocument),
+		vscode.workspace.onDidChangeTextDocument(e => updateNodeFromDocument(e.document))
+	);
 }
 
 // This method is called when your extension is deactivated
