@@ -63,10 +63,39 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!request.continuous) {
 			return startTestRun(testController, request);
 		}
+
+		if (request.include === undefined) {
+			watchingTests.set("ALL", request.profile);
+			cancellation.onCancellationRequested(() => watchingTests.delete("ALL"));
+		} else {
+			request.include.forEach(item => watchingTests.set(item, request.profile));
+			cancellation.onCancellationRequested(() => request.include!.forEach(item => watchingTests.delete(item)));
+		}
 	}
 
 
 	context.subscriptions.push(...[disposable, _disposable, testController]);
+
+	testController.refreshHandler = async () => {
+		await Promise.all(getWorkspaceTestPatterns().map(({ pattern }) => findInitialFiles(testController, pattern)));
+	}
+
+	testController.createRunProfile("Run Tests", vscode.TestRunProfileKind.Run, runHandler, true, undefined, true);
+
+	const coverageProfile = testController.createRunProfile("Run with Coverage", vscode.TestRunProfileKind.Coverage, runHandler, true, undefined, true);
+	coverageProfile.loadDetailedCoverage = async (_testRun, coverage) => {
+		if (coverage instanceof MarkdownFileCoverage) {
+			return coverage.coveredLines.filter((l): l is vscode.StatementCoverage => !!l);
+		}
+
+		return [];
+	}
+
+	testController.resolveHandler = async item => {
+		if (!item) {
+			context.subscriptions.push(...startWatchingWorkspace(testController, fileChangedEmitter));
+		}
+	}
 }
 
 // This method is called when your extension is deactivated
@@ -153,6 +182,64 @@ function gatherTestItems(collection: vscode.TestItemCollection) {
 	collection.forEach((_item) => items.push(_item));
 
 	return items;
+}
+
+function getWorkspaceTestPatterns() {
+	if (!vscode.workspace.workspaceFolders) {
+		return [];
+	}
+
+	return vscode.workspace.workspaceFolders.map(workspaceFolder => ({
+		workspaceFolder,
+		pattern: new vscode.RelativePattern(workspaceFolder, '**/*.md');
+	}));
+}
+
+async function findInitialFiles(controller: vscode.TestController, pattern: vscode.GlobPattern) {
+	for (const file of await vscode.workspace.findFiles(pattern)) {
+		getOrCreateFile(controller, file);
+	}
+}
+
+function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
+	const existing = controller.items.get(uri.toString());
+	if (existing) {
+		return {
+			file: existing,
+			data: testData.get(existing) as TestFile
+		};
+	}
+
+	const file = controller.createTestItem(uri.toString(), uri.path.split("/").pop()!, uri);
+	controller.items.add(file);
+
+	const data = new TestFile();
+	testData.set(file, data);
+
+	file.canResolveChildren = true;
+	return { file, data };
+}
+
+function startWatchingWorkspace(controller: vscode.TestController, fileChangedEmitter: vscode.EventEmitter<vscode.Uri>) {
+	return getWorkspaceTestPatterns().map(({ pattern }) => {
+		const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+		watcher.onDidCreate(uri => {
+			getOrCreateFile(controller, uri);
+			fileChangedEmitter.fire(uri);
+		});
+		watcher.onDidChange(async uri => {
+			const { file, data } = getOrCreateFile(controller, uri);
+			if (data.didResolve) {
+				await data.updateFromDisk(controller, file);
+			}
+			fileChangedEmitter.fire(uri);
+		});
+
+		findInitialFiles(controller, pattern);
+
+		return watcher;
+	});
 }
 
 
