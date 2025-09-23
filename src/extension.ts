@@ -184,9 +184,9 @@ function startTestRun(ctrl: vscode.TestController, request: vscode.TestRunReques
 				await data.run(test, run);
 			}
 
-			const lienNo = test.range!.start.line;
+			const lienNo = test.range?.start.line;
 			const fileCoverage = coveredLines.get(test.uri!.toString());
-			const lineInfo = fileCoverage?.[lienNo];
+			const lineInfo = typeof lienNo === "undefined" ? null : fileCoverage?.[lienNo];
 
 			if (lineInfo) {
 				(lineInfo.executed as number)++
